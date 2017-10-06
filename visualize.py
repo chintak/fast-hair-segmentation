@@ -20,9 +20,11 @@ def name_to_viz_name(name, gt):
 
 def viz_png_file(im, mask, name, gt=False):
     img = im.copy()
-    mask = (find_boundaries(mask, mode='thick') > 0).astype(np.uint8)
     r, g, b = img[..., 0], img[..., 1], img[..., 2]
-    r[mask==1], g[mask==1], b[mask==1] = 255, 0, 255
+    maskf = (find_boundaries(mask==FACE, mode='inner') > 0).astype(np.uint8)
+    r[maskf==1], g[maskf==1], b[maskf==1] = 0, 255, 0
+    maskh = (find_boundaries(mask==HAIR, mode='inner') > 0).astype(np.uint8)
+    r[maskh==1], g[maskh==1], b[maskh==1] = 255, 0, 255
     img = np.dstack((r, g, b))
     imsave(name_to_viz_name(name, gt), img)
 

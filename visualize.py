@@ -21,8 +21,8 @@ def viz_png_file(im, mask, name, gt=False):
     img = im.copy()
     r, g, b = img[..., 0], img[..., 1], img[..., 2]
     if not gt:
-        r[mask==HAIR] = 180
-        b[mask==FACE] = 180
+        r[mask==HAIR] = 220
+        b[mask==FACE] = 220
     else:
         r[mask==HAIR], g[mask==HAIR], b[mask==HAIR] = 0, 0, 255
         r[mask==FACE], g[mask==FACE], b[mask==FACE] = 0, 255, 0
@@ -34,6 +34,7 @@ def viz_png_file(im, mask, name, gt=False):
 def viz_files(names, keyps, bst, png=True):
     featurize = Conf['FEATS']
     for k, (name, keyp) in enumerate(zip(names, keyps)):
+        if not os.path.exists(name): continue
         im = imread(name)
         idxs, patches = data.patchify(im, WINDOW)
         feats = np.asarray([featurize.process(x, y, patch, im, keyp)
@@ -50,9 +51,7 @@ def viz_files(names, keyps, bst, png=True):
         return im, pr
 
 def visualize(model_fname, mat_viz_file):
-    params = configs.basic()
-    if params.has_key('eval_metric'): del params['eval_metric']
-    bst = xgb.Booster(params=params)
+    bst = xgb.Booster(params=configs.basic(val=True))
     bst.load_model(model_fname)
 
     names, keypoints = data.mat_to_name_keyp(mat_viz_file)

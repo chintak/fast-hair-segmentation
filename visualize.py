@@ -5,6 +5,7 @@ import numpy as np
 import os
 from skimage.io import imread, imsave
 import skimage.color as color
+from skimage.segmentation import find_boundaries
 import xgboost as xgb
 
 import data
@@ -19,14 +20,9 @@ def name_to_viz_name(name, gt):
 
 def viz_png_file(im, mask, name, gt=False):
     img = im.copy()
+    mask = (find_boundaries(mask, mode='thick') > 0).astype(np.uint8)
     r, g, b = img[..., 0], img[..., 1], img[..., 2]
-    if not gt:
-        r[mask==HAIR] = 220
-        b[mask==FACE] = 220
-    else:
-        r[mask==HAIR], g[mask==HAIR], b[mask==HAIR] = 0, 0, 255
-        r[mask==FACE], g[mask==FACE], b[mask==FACE] = 0, 255, 0
-    # r[mask==BKG],  g[mask==BKG],  b[mask==BKG]  = 255, 0, 0
+    r[mask==1], g[mask==1], b[mask==1] = 255, 0, 255
     img = np.dstack((r, g, b))
     imsave(name_to_viz_name(name, gt), img)
 

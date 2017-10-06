@@ -61,4 +61,13 @@ def feats2():
         'FEATS': featurizer.Featurizer(types=fts, window=window),
     }
 
-Conf = feats1()
+
+def feats3():
+    window = 11
+    fts = ['loc', 'col', 'stats', 'kpolar']
+    return {
+        'WINDOW': window,
+        'FEATS': featurizer.Featurizer(types=fts, window=window),
+    }
+
+Conf = feats3()

@@ -35,7 +35,14 @@ class Featurizer(object):
 
     def get_keyp_polar_features(self, feats, x, y, sz, keyps):
         xy = np.array([x, y], dtype=np.float)
-        diffs = (keyps - xy) / sz
+        kps = np.asarray([
+            keyps[keyps[:, 0].argmax(), :],
+            keyps[keyps[:, 0].argmin(), :],
+            keyps[keyps[:, 1].argmax(), :],
+            keyps[keyps[:, 1].argmin(), :],
+            keyps.mean(axis=0),
+        ])
+        diffs = (kps - xy) / sz
         feats.extend((diffs*diffs).sum(axis=1).ravel())
         feats.extend(np.arctan2(diffs[:, 1], diffs[:, 0]).ravel())
 

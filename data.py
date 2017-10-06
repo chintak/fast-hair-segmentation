@@ -68,14 +68,13 @@ def gen_train_data(proc_names, proc_keypoints, out_q=None, seed=1234):
         if m != M or n != N:
             xsr, ysr = sampling(m, n, WINDOW)
             M, N = m, n
+        if np.any(keyp[:-1, :] > np.asarray([m - WINDOW//2, n - WINDOW//2])):
+            print '[{}] Skipping {}'.format(os.getpid(), fn)
+            continue
         for x, y in zip(xsr, ysr):
             patch = im[y:y+WINDOW, x:x+WINDOW, :]
             gtpatch = gt[y:y+WINDOW, x:x+WINDOW]
-            fft = featurize.process(x, y, patch, im, keyp)
-            if len(fft) != num_feats:
-                print 'ERRRRRRR', num_feats, len(fft), fn, keyp.shape, patch.shape, im.shape
-                continue
-            train_x[j, :] = fft
+            train_x[j, :] = featurize.process(x, y, patch, im, keyp)
             train_y[j] = featurize.processY(gtpatch)
             j += 1
         if j == train_x.shape[0]:

@@ -31,10 +31,7 @@ class Featurizer(object):
             cells_per_block=(1, 1), block_norm='L2-Hys'))
 
     def get_color_features(self, feats, patch):
-        if patch.dtype == np.uint8:
-            feats.extend(patch.ravel() / 255.)
-        else:
-            feats.extend(patch.ravel())
+        feats.extend(patch.ravel())
 
     def get_keyp_polar_features(self, feats, x, y, sz, keyps):
         xy = np.array([x, y], dtype=np.float)
@@ -60,8 +57,8 @@ class Featurizer(object):
 
     def _sample_patch(self, im, x, y):
         xs, ys = int(max(x - self.window // 2, 0)), int(max(y - self.window // 2, 0))
-        p = im[xs:xs+self.window, ys:ys+self.window, :].ravel()
-        return p / 255. if p.dtype == np.uint8 else p
+        return im[xs:xs+self.window, ys:ys+self.window, :].ravel()
+#        return p / 255. if p.dtype == np.uint8 else p
 
     def _norm_face_dims(self, keyps):
         return float(np.max(keyps[:, 1]) - np.min(keyps[:, 1]))

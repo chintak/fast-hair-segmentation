@@ -20,9 +20,33 @@ def basic(val=False):
     return d
 
 
-def feats1():
+def deep(val=False):
+    d = {
+        'booster': 'gbtree',
+        'num_class': 3,
+        'objective': 'multi:softprob',
+        'eta': 1.0,
+        'gamma': 1.0,
+        'min_child_weight': 1,
+        'max_depth': 8,
+        'num_round': 50,
+    }
+    if not val: d['eval_metric'] = ['merror', 'mlogloss']
+    return d
+
+
+def feats0():
     window = 11
     fts = ['loc', 'stats', 'hog']
+    return {
+        'WINDOW': window,
+        'FEATS': featurizer.Featurizer(types=fts, window=window),
+    }
+
+
+def feats1():
+    window = 11
+    fts = ['loc', 'col', 'stats', 'hog']
     return {
         'WINDOW': window,
         'FEATS': featurizer.Featurizer(types=fts, window=window),
@@ -37,4 +61,4 @@ def feats2():
         'FEATS': featurizer.Featurizer(types=fts, window=window),
     }
 
-Conf = feats2()
+Conf = feats1()

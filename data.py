@@ -17,7 +17,8 @@ from configs import Conf
 
 Set = ''
 WINDOW = Conf['WINDOW']
-tmdir = tm.mkdtemp(dir='/Volumes/P/')
+DATA_DIR = 'LFW/'
+tmdir = tm.mkdtemp(dir=DATA_DIR)
 
 
 def img2gt(name):
@@ -32,17 +33,25 @@ def img2gt(name):
 
 def gen_train_data(proc_names, proc_keypoints, out_q=None, seed=1234):
     featurize = Conf['FEATS']
-    t1 = imread(proc_names[0])
-    tk1 = proc_keypoints[0]
-    num_feats = len(featurize.process(0, 0, t1[0:WINDOW, 0:WINDOW, :], t1, tk1))
+    num_feats = 0
+    for i, nm in enumerate(proc_names):
+        if os.path.exists(nm):
+            t1 = imread(nm)
+            tk1 = proc_keypoints[i]
+            num_feats = len(featurize.process(
+                0, 0, t1[0:WINDOW, 0:WINDOW, :], t1, tk1))
+            break
+    if not num_feats: return
 
     M, N, _ = t1.shape
     xsr, ysr = sampling(M, N, WINDOW)
     batch_samples = min(100, len(proc_names)) * len(xsr)
     train_x = np.zeros((batch_samples, num_feats), dtype=np.float)
-    train_y = np.zeros((batch_samples,), dtype=np.float)
+    train_y = np.zeros((batch_samples,), dtype=np.uint8)
     name = os.path.join(tmdir,
                         'hair.{}.txt.{}'.format(os.getpid(), Set.lower()))
+    print '[{}] # patches/img = {} Feature size = {}'.format(
+        os.getpid(), len(xsr), num_feats)
     print '[{}] Writing to {}'.format(os.getpid(), name)
     fp = open(name, 'wb')
     j = 0
@@ -66,16 +75,13 @@ def gen_train_data(proc_names, proc_keypoints, out_q=None, seed=1234):
             train_y[j] = featurize.processY(gtpatch)
             j += 1
         if j == train_x.shape[0]:
-            dump_svmlight_file(train_x, train_y, fp, multilabel=True)
-            train_y = []
+            dump_svmlight_file(train_x, train_y, fp)
             j = 0
+        if i % 10 == 0:
             print "[{}] Done {}.".format(os.getpid(), i)
 
-    dump_svmlight_file(train_x[:j, :], train_y[:j], fp, multilabel=True)
+    if j: dump_svmlight_file(train_x[:j, :], train_y[:j], fp)
     fp.close()
-    print '# of patches/img = {}'.format(xsr.size)
-    print '# of samples: HAIR = {}, FACE = {}, BKG = {}'.format(
-        *count_samples(train_y))
     if out_q:
         out_q.put(name)
     else:
@@ -166,7 +172,9 @@ def main():
     cmd = ["cat"]
     cmd.extend(trainN)
     cmd.append('>')
-    cmd.append('hair_{}_{}_{}.txt.{}'.format(WINDOW, suf, Set.lower()))
+    cmd.append(os.path.join(
+        DATA_DIR, 'hair_{}_{}.txt.{}'.format(
+            WINDOW, parse.suf, Set.lower())))
     call(' '.join(cmd), shell=True)
 
     print "Done"
@@ -174,7 +182,8 @@ def main():
 if __name__ == '__main__':
     try:
         main()
-    except:
-        # clean up
-        cmd = ["rm", "-rf", tmdir]
-        call(' '.join(cmd), shell=True)
+    except Exception as e:
+        print e
+    # clean up
+    cmd = ["rm", "-rf", tmdir]
+    call(' '.join(cmd), shell=True)

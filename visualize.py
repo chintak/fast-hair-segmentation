@@ -12,13 +12,12 @@ import data
 from configs import HAIR, FACE, BKG
 from configs import Conf
 
-WINDOW = Conf['WINDOW']
 
 def name_to_viz_name(name, gt):
     return os.path.join('viz{}'.format('_gt/' if gt else '/'), os.path.basename(name))
 
 
-def viz_png_file(im, mask, name, gt=False):
+def viz_png_file(im, mask):
     img = im.copy()
     r, g, b = img[..., 0], img[..., 1], img[..., 2]
     maskf = (find_boundaries(mask==FACE, mode='inner') > 0).astype(np.uint8)
@@ -26,31 +25,35 @@ def viz_png_file(im, mask, name, gt=False):
     maskh = (find_boundaries(mask==HAIR, mode='inner') > 0).astype(np.uint8)
     r[maskh==1], g[maskh==1], b[maskh==1] = 255, 0, 255
     img = np.dstack((r, g, b))
-    imsave(name_to_viz_name(name, gt), img)
+    return img
 
 
-def viz_files(names, keyps, bst, png=True):
-    featurize = Conf['FEATS']
+def viz_files(names, keyps, bst, featurize, window, png=True):
     for k, (name, keyp) in enumerate(zip(names, keyps)):
         if not os.path.exists(name): continue
         im = imread(name)
-        idxs, patches = data.patchify(im, WINDOW)
+        idxs, patches = data.patchify(im, window)
         feats = np.asarray([featurize.process(x, y, patch, im, keyp)
                             for (x, y), patch in zip(idxs, patches)], dtype=np.float)
         dset = xgb.DMatrix(feats)
         preds = np.argmax(bst.predict(dset), axis=1)
-        pr = data.unpatchify(im.shape, idxs, preds, WINDOW)
-        if png: viz_png_file(im, pr, name)
+        pr = data.unpatchify(im.shape, idxs, preds, window)
+        pr_img = viz_png_file(im, pr)
         if png:
+            imsave(name_to_viz_name(name, gt), pr_img)
             gt_mask = data.img2gt(name)
-            viz_png_file(im, gt_mask, name, gt=True)
+            gt_img = viz_png_file(im, gt_mask)
+            imsave(name_to_viz_name(name, True), gt_img)
         if k % 10 == 0: print "[{}] Done {}".format(os.getpid(), k)
     if not png:
-        return im, pr
+        return im, pr_img
 
-def visualize(model_fname, mat_viz_file):
-    bst = xgb.Booster(params=configs.basic(val=True))
+
+def visualize(model_fname, model_type, mat_viz_file):
+    bst = xgb.Booster(params=getattr(configs, model_type)(val=True))
     bst.load_model(model_fname)
+    featurize = Conf['FEATS']
+    window = Conf['WINDOW']
 
     names, keypoints = data.mat_to_name_keyp(mat_viz_file)
 
@@ -64,7 +67,7 @@ def visualize(model_fname, mat_viz_file):
         p = mp.Process(target=viz_files,
                        args=(names[chunksize*i:lim],
                              keypoints[chunksize*i:lim],
-                             bst.copy()))
+                             bst.copy(), featurize, window))
         procs.append(p)
         p.start()
 
@@ -75,11 +78,15 @@ def args():
     args = argparse.ArgumentParser()
     args.add_argument('model_file', help='')
     args.add_argument('mat_file', help='')
-    args.add_argument('-w', '--window', help='window size')
     return args.parse_args()
 
 
 if __name__ == '__main__':
     parse = args()
-    WINDOW = parse.window if parse.window else WINDOW
-    visualize(parse.model_file, parse.mat_file)
+    n, e = os.path.splitext(os.path.basename(parse.model_file))
+    mtype = n.split('_')[0]
+    if not hasattr(configs, mtype):
+        import sys
+        print 'Invalid model type. See configs.py'
+        sys.exit(0)
+    visualize(parse.model_file, mtype, parse.mat_file)

@@ -20,15 +20,58 @@ def basic(val=False):
     return d
 
 
-def deep(val=False):
+def subsample(val=False):
     d = {
         'booster': 'gbtree',
         'num_class': 3,
         'objective': 'multi:softprob',
-        'eta': 1.0,
+        'subsample': 0.5,
         'gamma': 1.0,
-        'min_child_weight': 1,
-        'max_depth': 8,
+        'max_depth': 5,
+        'num_round': 50,
+    }
+    if not val: d['eval_metric'] = ['merror', 'mlogloss']
+    return d
+
+
+def colsubsample(val=False):
+    d = {
+        'booster': 'gbtree',
+        'num_class': 3,
+        'objective': 'multi:softprob',
+        'colsubsample_bytree': 0.5,
+        'gamma': 1.0,
+        'max_depth': 5,
+        'num_round': 50,
+    }
+    if not val: d['eval_metric'] = ['merror', 'mlogloss']
+    return d
+
+
+def subcolsub(val=False):
+    d = {
+        'booster': 'gbtree',
+        'num_class': 3,
+        'objective': 'multi:softprob',
+        'subsample': 0.5,
+        'colsubsample_bysplit': 0.3,
+        'gamma': 1.0,
+        'max_depth': 5,
+        'num_round': 50,
+    }
+    if not val: d['eval_metric'] = ['merror', 'mlogloss']
+    return d
+
+
+def imbalance(val=False):
+    d = {
+        'booster': 'gbtree',
+        'num_class': 3,
+        'objective': 'multi:softprob',
+        'max_delta_step': 1.0,
+        'colsubsample_bytree': 0.75,
+        'gamma': 1.0,
+        'max_depth': 5,
         'num_round': 50,
     }
     if not val: d['eval_metric'] = ['merror', 'mlogloss']
@@ -70,4 +113,11 @@ def feats3():
         'FEATS': featurizer.Featurizer(types=fts, window=window),
     }
 
-Conf = feats2()
+
+def feats4():
+    window = 11
+    fts = ['loc', 'col', 'stats', 'kpolar', 'kmeancol']
+    return {
+        'WINDOW': window,
+        'FEATS': featurizer.Featurizer(types=fts, window=window),
+    }

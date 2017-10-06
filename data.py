@@ -12,11 +12,12 @@ import sys
 import xgboost as xgb
 import tempfile as tm
 
+import configs
 from configs import HAIR, FACE, BKG
-from configs import Conf
 
+Conf = None
 Set = ''
-WINDOW = Conf['WINDOW']
+WINDOW = None
 DATA_DIR = 'LFW/'
 tmdir = tm.mkdtemp(dir=DATA_DIR)
 
@@ -32,6 +33,7 @@ def img2gt(name):
 
 
 def gen_train_data(proc_names, proc_keypoints, out_q=None, seed=1234):
+    if not Conf or not WINDOW: raise ValueError('Conf not set')
     featurize = Conf['FEATS']
     num_feats = 0
     for i, nm in enumerate(proc_names):
@@ -131,12 +133,15 @@ def mat_to_name_keyp(mat_file):
 
 
 def main():
-    global Set
+    global Set, Conf, WINDOW
     args = argparse.ArgumentParser()
     args.add_argument('set', help='Train, Test or Validation')
     args.add_argument('suf', help='hair_<window>_<suf>.txt.<set>')
     parse = args.parse_args()
+    Conf = getattr(configs, parse.suf)()
     Set = parse.set
+    WINDOW = Conf['WINDOW']
+
     print "Using {} set".format(Set)
     train_mat_path = 'LFW/FaceKeypointsHOG_11_{}.mat'.format(Set)
     names, keypoints = mat_to_name_keyp(train_mat_path)
@@ -176,8 +181,7 @@ def main():
     cmd.extend(trainN)
     cmd.append('>')
     cmd.append(os.path.join(
-        DATA_DIR, 'hair_{}_{}.txt.{}'.format(
-            WINDOW, parse.suf, Set.lower())))
+        DATA_DIR, 'hair_{}.txt.{}'.format(parse.suf, Set.lower())))
     call(' '.join(cmd), shell=True)
 
     print "Done"
@@ -185,6 +189,8 @@ def main():
 if __name__ == '__main__':
     try:
         main()
+    except KeyboardInterrupt:
+        pass
     except Exception as e:
         print e
     # clean up

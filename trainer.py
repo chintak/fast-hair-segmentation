@@ -12,8 +12,8 @@ from configs import HAIR, FACE, BKG
 import configs
 
 
-def train(model_fname, dtrain, dval=None, dtest=None, cont=None):
-    params = configs.basic()
+def train(model_fname, model_type, dtrain, dval=None, dtest=None, cont=None):
+    params = getattr(configs, model_type)()
     evallist = []
     if dval: evallist.append((dval, 'val'))
     if dtest: evallist.append((dtest, 'test'))
@@ -38,14 +38,23 @@ def args():
     args.add_argument('-e', '--test', help='test set file')
     return args.parse_args()
 
+
 if __name__ == '__main__':
     parse = args()
-    mode_train = True if parse.train else False
+    n, e = os.path.splitext(os.path.basename(parse.model))
+    mtype = n.split('_')[0]
+    if not hasattr(configs, mtype):
+        import sys
+        print 'Invalid model type. See configs.py'
+        sys.exit(0)
+    print 'Model type {} & Model name {}'.format(mtype, parse.model)
     dtrain = xgb.DMatrix(parse.train) if parse.train else None
     dval = xgb.DMatrix(parse.validation) if parse.validation else None
     dtest = xgb.DMatrix(parse.test) if parse.test else None
 
     if dtrain:
-        train(parse.model, dtrain, dval=dval, dtest=dtest, cont=parse.cont)
+        train(parse.model, mtype,
+              dtrain, dval=dval, dtest=dtest,
+              cont=parse.cont)
     elif dtest or dval:
         test()

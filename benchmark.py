@@ -4,14 +4,14 @@ from glob import glob
 import data
 from visualize import viz_files
 from skimage.io import imsave
+import xgboost as xgb
 
 
 files_to_show = [
-    'Aaron_Sorkin_0002.jpg',
     'Adolfo_Aguilar_Zinser_0001',
-    'Abdoulaye_Wade_0004.jpg',
-    'Alexandra_Vodjanikova_0002',
-    'Alice_Fisher_0002',
+    'Ai_Sugiyama_0002',
+    'Ahmed_Ahmed_0001',
+    'Alexander_Payne_0001',
 ]
 
 save_prefix = 'benchmarks/'
@@ -33,7 +33,7 @@ def main():
     names, keypoints = data.mat_to_name_keyp('LFW/FaceKeypointsHOG_11_Test.mat')
     nshow, kpshow = [], []
     for nm, keyp in zip(names, keypoints):
-        n = os.path.basename(nm)
+        n, _ = os.path.splitext(os.path.basename(nm))
         if n in files_to_show:
             nshow.append(nm)
             kpshow.append(keyp)
@@ -46,7 +46,7 @@ def main():
         Conf = getattr(configs, feat_type)()
         featurize = Conf['FEATS']
         window = Conf['WINDOW']
-        for i, nm, keyp in enumerate(zip(nshow, kpshow)):
+        for i, (nm, keyp) in enumerate(zip(nshow, kpshow)):
             _, mim = viz_files([nm], [keyp], bst, featurize, window, png=False)
             mnm, _ = os.path.splitext(os.path.basename(mname))
             onm = os.path.join(save_prefix, '{}_{}.jpg'.format(mnm, i))

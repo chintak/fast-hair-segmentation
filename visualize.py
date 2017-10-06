@@ -10,11 +10,22 @@ import xgboost as xgb
 
 import data
 from configs import HAIR, FACE, BKG
-from configs import Conf
 
 
 def name_to_viz_name(name, gt):
     return os.path.join('viz{}'.format('_gt/' if gt else '/'), os.path.basename(name))
+
+
+def get_model_feature_type(name):
+    n, e = os.path.splitext(os.path.basename(name))
+    mtype, ftype = n.split('_')[:2]
+    if not hasattr(configs, mtype):
+        print 'Invalid model type in {}. See configs.py'.format(name)
+        mtype, ftype = None, None
+    if not hasattr(configs, ftype):
+        print 'Invalid feature type in {}. See configs.py'.format(name)
+        mtype, ftype = None, None
+    return mtype, ftype
 
 
 def viz_png_file(im, mask):
@@ -40,7 +51,7 @@ def viz_files(names, keyps, bst, featurize, window, png=True):
         pr = data.unpatchify(im.shape, idxs, preds, window)
         pr_img = viz_png_file(im, pr)
         if png:
-            imsave(name_to_viz_name(name, gt), pr_img)
+            imsave(name_to_viz_name(name, False), pr_img)
             gt_mask = data.img2gt(name)
             gt_img = viz_png_file(im, gt_mask)
             imsave(name_to_viz_name(name, True), gt_img)
@@ -49,9 +60,11 @@ def viz_files(names, keyps, bst, featurize, window, png=True):
         return im, pr_img
 
 
-def visualize(model_fname, model_type, mat_viz_file):
+def visualize(model_fname, mat_viz_file):
+    model_type, feat_type = get_model_feature_type(model_fname)
     bst = xgb.Booster(params=getattr(configs, model_type)(val=True))
     bst.load_model(model_fname)
+    Conf = getattr(configs, feat_type)()
     featurize = Conf['FEATS']
     window = Conf['WINDOW']
 
@@ -83,10 +96,4 @@ def args():
 
 if __name__ == '__main__':
     parse = args()
-    n, e = os.path.splitext(os.path.basename(parse.model_file))
-    mtype = n.split('_')[0]
-    if not hasattr(configs, mtype):
-        import sys
-        print 'Invalid model type. See configs.py'
-        sys.exit(0)
-    visualize(parse.model_file, mtype, parse.mat_file)
+    visualize(parse.model_file, parse.mat_file)

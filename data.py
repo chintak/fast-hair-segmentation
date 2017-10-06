@@ -71,7 +71,11 @@ def gen_train_data(proc_names, proc_keypoints, out_q=None, seed=1234):
         for x, y in zip(xsr, ysr):
             patch = im[y:y+WINDOW, x:x+WINDOW, :]
             gtpatch = gt[y:y+WINDOW, x:x+WINDOW]
-            train_x[j, :] = featurize.process(x, y, patch, im, keyp)
+            fft = featurize.process(x, y, patch, im, keyp)
+            if len(fft) != num_feats:
+                print 'ERRRRRRR', num_feats, len(fft), fn, keyp.shape, patch.shape, im.shape
+                continue
+            train_x[j, :] = fft
             train_y[j] = featurize.processY(gtpatch)
             j += 1
         if j == train_x.shape[0]:

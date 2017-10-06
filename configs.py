@@ -54,7 +54,7 @@ def feats1():
 
 
 def feats2():
-    window = 11
+    window = 7
     fts = ['loc', 'col', 'stats', 'kpolar', 'kmeancol']
     return {
         'WINDOW': window,
@@ -70,4 +70,4 @@ def feats3():
         'FEATS': featurizer.Featurizer(types=fts, window=window),
     }
 
-Conf = feats3()
+Conf = feats2()

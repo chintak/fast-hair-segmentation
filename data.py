@@ -119,12 +119,15 @@ def patchify(im, window, overlap=1.0):
 
 def unpatchify(shape, idxs, preds, window):
     m, n, _ = shape
-    im = np.zeros((m, n))
+    im = np.zeros((m, n, 3))
     mk = np.zeros((m, n))
     for (x, y), pr in zip(idxs, preds):
-        im[y:y+window, x:x+window] += pr
-        mk[y:y+window, x:x+window] = mk[y:y+window, x:x+window] + 1.
-    return np.uint8(np.round(im / (mk+np.finfo(np.float).eps)))
+        im[y:y+window, x:x+window, pr] += 1
+        mk[y:y+window, x:x+window] += 1.
+    im = np.argmax(im, axis=2)
+    im[mk == 0] = BKG
+    mk[mk == 0] = 1.
+    return im
 
 
 def mat_to_name_keyp(mat_file):

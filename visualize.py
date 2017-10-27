@@ -53,7 +53,7 @@ def viz_files(names, keyps, bst, featurize, window, png=True):
             imsave(name_to_viz_name(name, True), gt_img)
         if k % 10 == 0: print "[{}] Done {}".format(os.getpid(), k)
     if not png:
-        return im, pr_img
+        return im, pr
 
 
 def visualize(model_fname, mat_viz_file):

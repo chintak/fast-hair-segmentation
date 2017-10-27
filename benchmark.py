@@ -2,7 +2,7 @@ import configs
 import os
 from glob import glob
 import data
-from visualize import viz_files
+from visualize import viz_files, viz_png_file
 from skimage.io import imsave
 import xgboost as xgb
 
@@ -47,7 +47,8 @@ def main():
         featurize = Conf['FEATS']
         window = Conf['WINDOW']
         for i, (nm, keyp) in enumerate(zip(nshow, kpshow)):
-            _, mim = viz_files([nm], [keyp], bst, featurize, window, png=False)
+            im, mask = viz_files([nm], [keyp], bst, featurize, window, png=False)
+            mim = viz_png_file(im, mask)
             mnm, _ = os.path.splitext(os.path.basename(mname))
             onm = os.path.join(save_prefix, '{}_{}.jpg'.format(mnm, i))
             imsave(onm, mim)

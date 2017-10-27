@@ -63,7 +63,7 @@ class Featurizer(object):
         dim = patch.ndim
         if dim == 3:
             p = patch.reshape((-1, 3))
-            h, e = np.histogramdd(p, bins=(5, 5, 5), normed=True)
+            h, e = np.histogramdd(p, bins=(8, 8, 8), normed=True)
             feats.extend(h.ravel())
         else:
             h, e = np.histogram(patch, bins=16, normed=True)

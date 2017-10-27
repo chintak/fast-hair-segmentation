@@ -44,7 +44,7 @@ def viz_files(names, keyps, bst, featurize, window, png=True):
     for k, (name, keyp) in enumerate(zip(names, keyps)):
         if not os.path.exists(name): continue
         im = imread(name)
-        pr = predict.predict_single(im, keyp, featurize, bst, window)
+        pr = predict.predict_single(im, keyp, featurize, bst, window, overlap=0.5)
         pr_img = viz_png_file(im, pr)
         if png:
             imsave(name_to_viz_name(name, False), pr_img)

@@ -51,16 +51,37 @@ class Featurizer(object):
             feats.extend(self._sample_patch(im, keyps[i, 0], keyps[i, 1]))
 
     def get_keyp_mean_color_features(self, feats, im, keyps):
+        for ft in self._sample_keyp_mean_patches(im, keyps):
+            feats.extend(ft)
+
+    def get_keyp_mean_cdiff_features(self, feats, patch, im, keyps):
+        p = patch.astype(np.int16).ravel()
+        for k in self._sample_keyp_mean_patches(im, keyps):
+            feats.extend(k.astype(np.int16) - p)
+
+    def get_chist_features(self, feats, patch):
+        dim = patch.ndim
+        if dim == 3:
+            p = patch.reshape((-1, 3))
+            h, e = np.histogramdd(p, bins=(5, 5, 5), normed=True)
+            feats.extend(h.ravel())
+        else:
+            h, e = np.histogram(patch, bins=16, normed=True)
+            feats.extend(h.ravel())
+
+    def _sample_keyp_mean_patches(self, im, keyps):
+        fts = []
         meank = np.mean(keyps, axis=0)
-        feats.extend(self._sample_patch(im, meank[0], meank[1]))
+        fts.append(self._sample_patch(im, meank[0], meank[1]))
         maxkx = keyps[keyps[:, 0].argmax(), :]
-        feats.extend(self._sample_patch(im,
-                                        (meank[0] + maxkx[0]) // 2,
-                                        (meank[1] + maxkx[1]) // 2))
+        fts.append(self._sample_patch(im,
+                                      (meank[0] + maxkx[0]) // 2,
+                                      (meank[1] + maxkx[1]) // 2))
         minkx = keyps[keyps[:, 0].argmin(), :]
-        feats.extend(self._sample_patch(im,
-                                        (meank[0] + minkx[0]) // 2,
-                                        (meank[1] + minkx[1]) // 2))
+        fts.append(self._sample_patch(im,
+                                      (meank[0] + minkx[0]) // 2,
+                                      (meank[1] + minkx[1]) // 2))
+        return fts
 
     def _sample_patch(self, im, x, y):
         xs, ys = int(max(x - self.window // 2, 0)), int(max(y - self.window // 2, 0))
@@ -79,8 +100,11 @@ class Featurizer(object):
             elif t == 'stats': self.get_patch_stats_features(ft, patch)
             elif t == 'hog': self.get_hog_features(ft, patch)
             elif t == 'col': self.get_color_features(ft, patch)
+            elif t == 'chist': self.get_chist_features(ft, patch)
             elif t == 'kcol': self.get_keyp_color_features(ft, im, keypoints)
             elif t == 'kmeancol': self.get_keyp_mean_color_features(ft, im, keypoints)
+            elif t == 'kmeandiff':
+                self.get_keyp_mean_cdiff_features(ft, patch, im, keypoints)
             elif t == 'kpolar':
                 self.get_keyp_polar_features(ft, x, y, norm, keypoints)
         return ft

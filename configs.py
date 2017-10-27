@@ -3,121 +3,128 @@ import featurizer
 
 HAIR, FACE, BKG = 0, 1, 2
 
-def basic(val=False):
-    d = {
-        'booster': 'gbtree',
-        'num_class': 3,
-        'objective': 'multi:softprob',
+
+def model_decorator(model_config_func):
+    def wrapper(val=False):
+        d = {}
+        d['booster'] = 'gbtree'
+        d['num_class'] = 3
+        d['num_round'] = 50
+        d['objective'] = 'multi:softprob'
+        d['save_period'] = 1
+        d['eval_train'] = 1
+        d.update(model_config_func())
+        if not val: d['eval_metric'] = ['merror', 'mlogloss']
+        return d
+    return wrapper
+
+
+def feat_decorator(feat_func):
+    """ Wrapper for feat_func. window, feats_list = feat_func() """
+    def wrapper():
+        window, fts = feat_func()
+        return {
+            'WINDOW': window,
+            'FEATS': featurizer.Featurizer(types=fts, window=window),
+        }
+    return wrapper
+
+
+@model_decorator
+def basic():
+    return {
         'eta': 1.0,
         'gamma': 1.0,
         'min_child_weight': 1,
         'max_depth': 3,
-        'num_round': 50,
-        'save_period': 1,
-        'eval_train': 1,
     }
-    if not val: d['eval_metric'] = ['merror', 'mlogloss']
-    return d
 
 
-def subsample(val=False):
-    d = {
-        'booster': 'gbtree',
-        'num_class': 3,
-        'objective': 'multi:softprob',
+@model_decorator
+def small():
+    return {
+        'colsubsample_bytree': 0.5,
+        'eta': 1.0,
+        'gamma': 1.0,
+        'min_child_weight': 2,
+        'max_depth': 3,
+        'num_round': 10
+    }
+
+
+@model_decorator
+def subsample():
+    return {
         'subsample': 0.5,
         'gamma': 1.0,
         'max_depth': 5,
-        'num_round': 50,
     }
-    if not val: d['eval_metric'] = ['merror', 'mlogloss']
-    return d
 
 
-def colsubsample(val=False):
-    d = {
-        'booster': 'gbtree',
-        'num_class': 3,
-        'objective': 'multi:softprob',
+@model_decorator
+def colsubsample():
+    return {
         'colsubsample_bytree': 0.5,
         'gamma': 1.0,
         'max_depth': 5,
-        'num_round': 50,
     }
-    if not val: d['eval_metric'] = ['merror', 'mlogloss']
-    return d
 
 
-def subcolsub(val=False):
-    d = {
-        'booster': 'gbtree',
-        'num_class': 3,
-        'objective': 'multi:softprob',
+@model_decorator
+def subcolsub():
+    return {
         'subsample': 0.5,
         'colsubsample_bysplit': 0.3,
         'gamma': 1.0,
         'max_depth': 5,
-        'num_round': 50,
     }
-    if not val: d['eval_metric'] = ['merror', 'mlogloss']
-    return d
 
 
-def imbalance(val=False):
-    d = {
-        'booster': 'gbtree',
-        'num_class': 3,
-        'objective': 'multi:softprob',
+@model_decorator
+def imbalance():
+    return {
         'max_delta_step': 1.0,
         'colsubsample_bytree': 0.75,
         'gamma': 1.0,
         'max_depth': 5,
-        'num_round': 50,
-    }
-    if not val: d['eval_metric'] = ['merror', 'mlogloss']
-    return d
-
-
-def feats0():
-    window = 11
-    fts = ['loc', 'stats', 'hog']
-    return {
-        'WINDOW': window,
-        'FEATS': featurizer.Featurizer(types=fts, window=window),
     }
 
 
-def feats1():
-    window = 11
-    fts = ['loc', 'col', 'stats', 'hog']
-    return {
-        'WINDOW': window,
-        'FEATS': featurizer.Featurizer(types=fts, window=window),
-    }
+@feat_decorator
+def feats0(): return 11, ['loc', 'stats', 'hog']
 
 
-def feats2():
-    window = 7
-    fts = ['loc', 'col', 'stats', 'kpolar', 'kmeancol']
-    return {
-        'WINDOW': window,
-        'FEATS': featurizer.Featurizer(types=fts, window=window),
-    }
+@feat_decorator
+def feats1(): return 11, ['loc', 'col', 'stats', 'hog']
 
 
-def feats3():
-    window = 11
-    fts = ['loc', 'col', 'stats', 'kpolar']
-    return {
-        'WINDOW': window,
-        'FEATS': featurizer.Featurizer(types=fts, window=window),
-    }
+@feat_decorator
+def feats2(): return 7, ['loc', 'col', 'stats', 'kpolar', 'kmeancol']
 
 
-def feats4():
-    window = 11
-    fts = ['loc', 'col', 'stats', 'kpolar', 'kmeancol']
-    return {
-        'WINDOW': window,
-        'FEATS': featurizer.Featurizer(types=fts, window=window),
-    }
+@feat_decorator
+def feats3(): return 11, ['loc', 'col', 'stats', 'kpolar']
+
+
+@feat_decorator
+def feats4(): return 11, ['loc', 'col', 'stats', 'kpolar', 'kmeandiff']
+
+
+@feat_decorator
+def feats5(): return 11, ['kmeandiff']
+
+
+@feat_decorator
+def feats6(): return 11, ['loc', 'kpolar']
+
+
+@feat_decorator
+def feats7(): return 11, ['loc', 'kpolar', 'kmeandiff']
+
+
+@feat_decorator
+def feats8(): return 11, ['loc', 'chist']
+
+
+@feat_decorator
+def feats00(): return 11, ['loc', 'col']

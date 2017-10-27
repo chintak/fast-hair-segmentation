@@ -10,6 +10,7 @@ import xgboost as xgb
 
 import data
 from configs import HAIR, FACE, BKG
+import predict
 
 
 def name_to_viz_name(name, gt):
@@ -43,12 +44,7 @@ def viz_files(names, keyps, bst, featurize, window, png=True):
     for k, (name, keyp) in enumerate(zip(names, keyps)):
         if not os.path.exists(name): continue
         im = imread(name)
-        idxs, patches = data.patchify(im, window)
-        feats = np.asarray([featurize.process(x, y, patch, im, keyp)
-                            for (x, y), patch in zip(idxs, patches)], dtype=np.float)
-        dset = xgb.DMatrix(feats)
-        preds = np.argmax(bst.predict(dset), axis=1)
-        pr = data.unpatchify(im.shape, idxs, preds, window)
+        pr = predict.predict_single(im, keyp, featurize, bst, window)
         pr_img = viz_png_file(im, pr)
         if png:
             imsave(name_to_viz_name(name, False), pr_img)

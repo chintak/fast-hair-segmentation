@@ -48,7 +48,7 @@ def small():
         'gamma': 1.0,
         'min_child_weight': 2,
         'max_depth': 3,
-        'num_round': 10
+#        'num_round': 10
     }
 
 

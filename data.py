@@ -93,9 +93,10 @@ def gen_train_data(proc_names, proc_keypoints, out_q=None, seed=1234):
         return train_x, train_y
 
 
-def sampling(m, n, window):
-    xs, ys = np.meshgrid(range(0, n - window, window),
-                         range(0, m - window, window))
+def sampling(m, n, window, overlap=1.0):
+    freq = int(round(window * overlap))
+    xs, ys = np.meshgrid(range(0, n - window, freq),
+                         range(0, m - window, freq))
     xsr, ysr = xs.ravel(), ys.ravel()
     return (xsr, ysr)
 
@@ -109,19 +110,21 @@ def count_samples(ys):
     return n_hair, n_face, n_bkg
 
 
-def patchify(im, window):
+def patchify(im, window, overlap=1.0):
     m, n, _ = im.shape
-    xsr, ysr = sampling(m, n, window)
+    xsr, ysr = sampling(m, n, window, overlap)
     patches = [im[y:y+window, x:x+window, :] for x, y in zip(xsr, ysr)]
     return zip(xsr, ysr), patches
 
 
 def unpatchify(shape, idxs, preds, window):
     m, n, _ = shape
-    im = np.zeros((m, n)) + BKG
+    im = np.zeros((m, n))
+    mk = np.zeros((m, n))
     for (x, y), pr in zip(idxs, preds):
-        im[y:y+window, x:x+window] = pr
-    return im
+        im[y:y+window, x:x+window] += pr
+        mk[y:y+window, x:x+window] = mk[y:y+window, x:x+window] + 1.
+    return np.uint8(np.round(im / (mk+np.finfo(np.float).eps)))
 
 
 def mat_to_name_keyp(mat_file):

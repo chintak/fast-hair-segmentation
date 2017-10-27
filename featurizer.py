@@ -59,15 +59,23 @@ class Featurizer(object):
         for k in self._sample_keyp_mean_patches(im, keyps):
             feats.extend(k.astype(np.int16) - p)
 
+    def get_chist_diff_features(self, feats, patch, im, keyps):
+        p = self._chist_feats(patch)
+        for k in self._sample_keyp_mean_patches(im, keyps):
+            feats.extend(self._chist_feats(k.reshape(patch.shape)) - p)
+
     def get_chist_features(self, feats, patch):
+        feats.extend(self._chist_feats(patch))
+
+    def _chist_feats(self, patch):
         dim = patch.ndim
         if dim == 3:
             p = patch.reshape((-1, 3))
             h, e = np.histogramdd(p, bins=(8, 8, 8), normed=True)
-            feats.extend(h.ravel())
+            h = h.ravel()
         else:
             h, e = np.histogram(patch, bins=16, normed=True)
-            feats.extend(h.ravel())
+        return h
 
     def _sample_keyp_mean_patches(self, im, keyps):
         fts = []
@@ -101,6 +109,7 @@ class Featurizer(object):
             elif t == 'hog': self.get_hog_features(ft, patch)
             elif t == 'col': self.get_color_features(ft, patch)
             elif t == 'chist': self.get_chist_features(ft, patch)
+            elif t == 'histdiff': self.get_chist_diff_features(ft, patch, im, keypoints)
             elif t == 'kcol': self.get_keyp_color_features(ft, im, keypoints)
             elif t == 'kmeancol': self.get_keyp_mean_color_features(ft, im, keypoints)
             elif t == 'kmeandiff':
@@ -113,3 +122,12 @@ class Featurizer(object):
         # if np.count_nonzero(gtpatch == HAIR) > 0.8 * np.size(gtpatch):
         #     return HAIR
         return np.bincount(gtpatch.ravel()).argmax()
+
+
+class HeirarchicalFeaturizer(object):
+    def __init__(self, fts=['loc', 'col', 'stats', 'histdiff'], windows):
+        self._fzs = [Featurizer(fts, w) for w in windows]
+        self.fts = fts
+
+    def process(self, x, y, patch, im, keypoints):
+        pass

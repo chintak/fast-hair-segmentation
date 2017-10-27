@@ -123,7 +123,7 @@ def feats7(): return 11, ['loc', 'kpolar', 'kmeandiff']
 
 
 @feat_decorator
-def feats8(): return 11, ['loc', 'chist']
+def feats8(): return 11, ['loc', 'col', 'stats', 'chist']
 
 
 @feat_decorator

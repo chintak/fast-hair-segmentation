@@ -1,7 +1,5 @@
 import featurizer
-
-
-HAIR, FACE, BKG = 0, 1, 2
+from constants import HAIR, FACE, BKG
 
 
 def model_decorator(model_config_func):
@@ -81,6 +79,16 @@ def subcolsub():
 
 
 @model_decorator
+def optim():
+    return {
+        'eta'             : 0.1,
+        'max_depth'       : 4,
+        'subsample'       : 0.9,
+        'min_child_weight': 1000,
+    }
+
+
+@model_decorator
 def imbalance():
     return {
         'max_delta_step': 1.0,
@@ -93,38 +101,59 @@ def imbalance():
 @feat_decorator
 def feats0(): return 11, ['loc', 'stats', 'hog']
 
-
 @feat_decorator
 def feats1(): return 11, ['loc', 'col', 'stats', 'hog']
-
 
 @feat_decorator
 def feats2(): return 7, ['loc', 'col', 'stats', 'kpolar', 'kmeancol']
 
-
 @feat_decorator
 def feats3(): return 11, ['loc', 'col', 'stats', 'kpolar']
-
 
 @feat_decorator
 def feats4(): return 11, ['loc', 'col', 'stats', 'kpolar', 'kmeandiff']
 
-
 @feat_decorator
 def feats5(): return 11, ['kmeandiff']
-
 
 @feat_decorator
 def feats6(): return 11, ['loc', 'kpolar']
 
-
 @feat_decorator
 def feats7(): return 11, ['loc', 'kpolar', 'kmeandiff']
-
 
 @feat_decorator
 def feats8(): return 11, ['loc', 'col', 'stats', 'histdiff']
 
-
 @feat_decorator
 def feats00(): return 11, ['loc', 'col']
+
+### u1
+@feat_decorator
+def u1featsl3l0(): return 44, feats3()['FEATS'].types()
+
+@feat_decorator
+def u1featsl3l1(): return 22, feats3()['FEATS'].types()
+
+@feat_decorator
+def u1featsl3l2(): return 11, feats3()['FEATS'].types()
+
+### u2
+@feat_decorator
+def u2featsl3l0(): return 44, feats4()['FEATS'].types()
+
+@feat_decorator
+def u2featsl3l1(): return 22, feats4()['FEATS'].types()
+
+@feat_decorator
+def u2featsl3l2(): return 11, feats4()['FEATS'].types()
+
+### u3
+@feat_decorator
+def u3featsl3l0(): return 44, ['loc', 'stats', 'histdiff']
+
+@feat_decorator
+def u3featsl3l1(): return 22, ['loc', 'col', 'kpolar']
+
+@feat_decorator
+def u3featsl3l2(): return 11, feats4()['FEATS'].types()

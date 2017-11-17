@@ -14,6 +14,7 @@ import tempfile as tm
 
 import configs
 from configs import HAIR, FACE, BKG
+from utils import *
 
 Conf = None
 Set = ''
@@ -22,17 +23,8 @@ DATA_DIR = 'LFW/'
 tmdir = tm.mkdtemp(dir=DATA_DIR)
 
 
-def img2gt(name):
-    datf = os.path.join('LFW/parts_lfw_funneled_gt',
-                        '/'.join(name.split('.')[0].split('/')[-2:]) + '.dat')
-    supf = os.path.join('LFW/parts_lfw_funneled_superpixels_mat',
-                        '/'.join(name.split('.')[0].split('/')[-2:]) + '.dat')
-    gt = np.loadtxt(datf, dtype=np.uint8)[1:]
-    gtsup = np.loadtxt(supf, dtype=np.uint64)
-    return np.apply_along_axis(lambda row: map(lambda k: gt[k], row), 1, gtsup)
-
-
-def gen_train_data(proc_names, proc_keypoints, out_q=None, seed=1234):
+def gen_train_data(proc_names, proc_keypoints, hr_model_configs=[],
+                   out_q=None, seed=1234):
     if not Conf or not WINDOW: raise ValueError('Conf not set')
     featurize = Conf['FEATS']
     num_feats = 0
@@ -40,8 +32,10 @@ def gen_train_data(proc_names, proc_keypoints, out_q=None, seed=1234):
         if os.path.exists(nm):
             t1 = imread(nm)
             tk1 = proc_keypoints[i]
+            p1 = hr_predict_single(t1, tk1, hr_model_configs, overlap=0.5)
+            if not isinstance(p1, list): p1 = [p1]
             num_feats = len(featurize.process(
-                0, 0, t1[0:WINDOW, 0:WINDOW, :], t1, tk1))
+                0, 0, t1[0:WINDOW, 0:WINDOW, :], t1, tk1, p1))
             break
     if not num_feats: return
 
@@ -66,6 +60,9 @@ def gen_train_data(proc_names, proc_keypoints, out_q=None, seed=1234):
         im = imread(fn)
         gt = img2gt(fn)
         m, n, _ = im.shape
+        hr_preds = hr_predict_single(im, keyp, hr_model_configs, overlap=0.5)
+        if not isinstance(hr_preds, list): hr_preds = [hr_preds]
+
         # sample patches
         if m != M or n != N:
             xsr, ysr = sampling(m, n, WINDOW)
@@ -76,7 +73,7 @@ def gen_train_data(proc_names, proc_keypoints, out_q=None, seed=1234):
         for x, y in zip(xsr, ysr):
             patch = im[y:y+WINDOW, x:x+WINDOW, :]
             gtpatch = gt[y:y+WINDOW, x:x+WINDOW]
-            train_x[j, :] = featurize.process(x, y, patch, im, keyp)
+            train_x[j, :] = featurize.process(x, y, patch, im, keyp, hr_preds)
             train_y[j] = featurize.processY(gtpatch)
             j += 1
         if j == train_x.shape[0]:
@@ -93,14 +90,6 @@ def gen_train_data(proc_names, proc_keypoints, out_q=None, seed=1234):
         return train_x, train_y
 
 
-def sampling(m, n, window, overlap=1.0):
-    freq = int(round(window * overlap))
-    xs, ys = np.meshgrid(range(0, n - window, freq),
-                         range(0, m - window, freq))
-    xsr, ysr = xs.ravel(), ys.ravel()
-    return (xsr, ysr)
-
-
 def count_samples(ys):
     n_face, n_hair, n_bkg = 0, 0, 0
     for e in ys:
@@ -110,43 +99,29 @@ def count_samples(ys):
     return n_hair, n_face, n_bkg
 
 
-def patchify(im, window, overlap=1.0):
-    m, n, _ = im.shape
-    xsr, ysr = sampling(m, n, window, overlap)
-    patches = [im[y:y+window, x:x+window, :] for x, y in zip(xsr, ysr)]
-    return zip(xsr, ysr), patches
-
-
-def unpatchify(shape, idxs, preds, window):
-    m, n, _ = shape
-    im = np.zeros((m, n, 3))
-    mk = np.zeros((m, n))
-    for (x, y), pr in zip(idxs, preds):
-        im[y:y+window, x:x+window, pr] += 1
-        mk[y:y+window, x:x+window] += 1.
-    im = np.argmax(im, axis=2)
-    im[mk == 0] = BKG
-    mk[mk == 0] = 1.
-    return im
-
-
 def mat_to_name_keyp(mat_file):
     kp = loadmat(mat_file)
     keypoints = map(lambda k: k[0] - 1, kp['Keypoints'])
-    names = map(lambda k: 'LFW/lfw_funneled/' + '/'.join(str(k[0][0]).split('/')[-2:]), kp['Names'])
+    names = map(lambda k: 'LFW/lfw_funneled/' + '/'.join(str(k[0][0]).split('/')[-2:]),
+                kp['Names'])
     # hogs = map(lambda k: k[0], kp['HOGs'])
     return names, keypoints
 
 
 def main():
     global Set, Conf, WINDOW
-    args = argparse.ArgumentParser()
+    args = argparse.ArgumentParser('Output: hair_<window>_<suf>.txt.<set>')
     args.add_argument('set', help='Train, Test or Validation')
-    args.add_argument('suf', help='hair_<window>_<suf>.txt.<set>')
+    args.add_argument('suf', help='Feature config name.')
+    args.add_argument('--hr', '-u', help='Hierarchical models. model_path1,...')
+    args.add_argument('--out', '-o', help='Override output file name.')
     parse = args.parse_args()
     Conf = getattr(configs, parse.suf)()
+
     Set = parse.set
     WINDOW = Conf['WINDOW']
+    outname = os.path.join(DATA_DIR, 'hair_{}.txt.{}'.format(
+        parse.suf, Set.lower())) if not parse.out else parse.out
 
     print "Using {} set".format(Set)
     train_mat_path = 'LFW/FaceKeypointsHOG_11_{}.mat'.format(Set)
@@ -164,10 +139,12 @@ def main():
         NUM_TRAIN_SAMPS, nprocs, chunksize)
 
     for i in range(nprocs):
+        hr_model_configs = hr_name_to_models(parse.hr)
         lim = chunksize * (i+1) if i < nprocs - 1 else NUM_TRAIN_SAMPS
         p = mp.Process(target=gen_train_data,
                        args=(names[chunksize*i:lim],
                              keypoints[chunksize*i:lim],
+                             hr_model_configs,
                              out_q, rngs[i]))
         procs.append(p)
         p.start()
@@ -186,11 +163,11 @@ def main():
     cmd = ["cat"]
     cmd.extend(trainN)
     cmd.append('>')
-    cmd.append(os.path.join(
-        DATA_DIR, 'hair_{}.txt.{}'.format(parse.suf, Set.lower())))
+    cmd.append(outname)
     call(' '.join(cmd), shell=True)
 
     print "Done"
+    print outname
 
 if __name__ == '__main__':
     try:
@@ -199,6 +176,7 @@ if __name__ == '__main__':
         pass
     except Exception as e:
         print e
+        raise
     # clean up
     cmd = ["rm", "-rf", tmdir]
     call(' '.join(cmd), shell=True)

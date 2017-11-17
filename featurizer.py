@@ -4,11 +4,16 @@ from skimage.feature import hog
 from skimage.color import rgb2gray
 from scipy.io import loadmat, savemat
 
+from constants import BKG, FACE, HAIR
+
 
 class Featurizer(object):
     def __init__(self, types=['loc', 'stats', 'hog'], window=0):
         self.fts = types
         self.window = window
+
+    def types(self):
+        return self.fts
 
     def get_patch_loc_feats(self, feats, x, y, sz):
         feats.append(float(x)/sz)
@@ -67,6 +72,12 @@ class Featurizer(object):
     def get_chist_features(self, feats, patch):
         feats.extend(self._chist_feats(patch))
 
+    def get_heirarchical_labels(self, feats, x, y, hr_maps):
+        for pr in hr_maps:
+            p = pr[x:x+self.window, y:y+self.window]
+            s = self.window ** 2 * 1.0
+            feats.extend([np.sum(p==BKG)/s, np.sum(p==FACE)/s, np.sum(p==FACE)/s])
+
     def _chist_feats(self, patch):
         dim = patch.ndim
         if dim == 3:
@@ -93,13 +104,20 @@ class Featurizer(object):
 
     def _sample_patch(self, im, x, y):
         xs, ys = int(max(x - self.window // 2, 0)), int(max(y - self.window // 2, 0))
-        return im[xs:xs+self.window, ys:ys+self.window, :].ravel()
+        p = im[xs:xs+self.window, ys:ys+self.window, :]
+        if self.window != p.shape[0]:
+            p = np.lib.pad(p, ((0, self.window - p.shape[0]), (0, 0), (0, 0)),
+                           'constant')
+        if self.window != p.shape[1]:
+            p = np.lib.pad(p, ((0, 0), (0, self.window - p.shape[1]), (0, 0)),
+                           'constant')
+        return p.ravel()
 #        return p / 255. if p.dtype == np.uint8 else p
 
     def _norm_face_dims(self, keyps):
         return float(np.max(keyps[:, 1]) - np.min(keyps[:, 1]))
 
-    def process(self, x, y, patch, im, keypoints):
+    def process(self, x, y, patch, im, keypoints, hr_maps=[]):
         keypoints = keypoints[:-1, :]  # ignore the m, n appended to keypoint list
         norm = self._norm_face_dims(keypoints)
         ft = []
@@ -116,18 +134,10 @@ class Featurizer(object):
                 self.get_keyp_mean_cdiff_features(ft, patch, im, keypoints)
             elif t == 'kpolar':
                 self.get_keyp_polar_features(ft, x, y, norm, keypoints)
+        if hr_maps: self.get_heirarchical_labels(ft, x, y, hr_maps)
         return ft
 
     def processY(self, gtpatch):
         # if np.count_nonzero(gtpatch == HAIR) > 0.8 * np.size(gtpatch):
         #     return HAIR
         return np.bincount(gtpatch.ravel()).argmax()
-
-
-class HeirarchicalFeaturizer(object):
-    def __init__(self, fts=['loc', 'col', 'stats', 'histdiff'], windows):
-        self._fzs = [Featurizer(fts, w) for w in windows]
-        self.fts = fts
-
-    def process(self, x, y, patch, im, keypoints):
-        pass

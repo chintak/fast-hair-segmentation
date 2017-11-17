@@ -1,0 +1,1 @@
+HAIR, FACE, BKG = 0, 1, 2

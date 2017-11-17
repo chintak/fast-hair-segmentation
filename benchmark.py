@@ -6,6 +6,8 @@ from visualize import viz_files, viz_png_file
 from skimage.io import imsave
 import xgboost as xgb
 
+from utils import get_model_feature_type
+
 
 files_to_show = [
     'Adolfo_Aguilar_Zinser_0001',
@@ -15,17 +17,6 @@ files_to_show = [
 ]
 
 save_prefix = 'benchmarks/'
-
-def get_model_feature_type(name):
-    n, e = os.path.splitext(os.path.basename(name))
-    mtype, ftype = n.split('_')[:2]
-    if not hasattr(configs, mtype):
-        print 'Invalid model type in {}. See configs.py'.format(name)
-        mtype, ftype = None, None
-    if not hasattr(configs, ftype):
-        print 'Invalid feature type in {}. See configs.py'.format(name)
-        mtype, ftype = None, None
-    return mtype, ftype
 
 
 def main():

@@ -42,7 +42,7 @@ def main(model_fnames):
 
 if __name__ == '__main__':
     args = argparse.ArgumentParser()
-    args.add_argument('mname', nargs='+', help='Model file names')
+    args.add_argument('--mname', nargs='+', help='Model file names')
     parser = args.parse_args()
 
     if parser.mname:

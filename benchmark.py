@@ -48,6 +48,9 @@ if __name__ == '__main__':
     if parser.mname:
         model_fnames = [','.join(parser.mname)]
     else:
-        model_fnames = glob('models/*.model')
+        model_fnames = set(glob('models/*.model'))
+        ign_hr_mods = set(glob('models/*_u*.model'))
+        model_fnames = list(model_fnames - ign_hr_mods)
+
     print "Model: {}".format(model_fnames)
     main(model_fnames)

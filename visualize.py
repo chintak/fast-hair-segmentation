@@ -10,7 +10,7 @@ import xgboost as xgb
 
 import data
 from configs import HAIR, FACE, BKG
-import predict
+from utils import hr_name_to_models, hr_predict_single
 
 
 def name_to_viz_name(name, gt):
@@ -40,20 +40,21 @@ def viz_png_file(im, mask):
     return img
 
 
-def viz_files(names, keyps, bst, featurize, window, png=True):
+def viz_files(names, keyps, model_fname, png=True):
+    model_confs = hr_name_to_models(model_fname)
     for k, (name, keyp) in enumerate(zip(names, keyps)):
         if not os.path.exists(name): continue
         im = imread(name)
-        pr = predict.predict_single(im, keyp, featurize, bst, window, overlap=0.5)
-        pr_img = viz_png_file(im, pr)
+        prs = hr_predict_single(im, keyp, model_confs, overlap=0.5, last=False)
         if png:
-            imsave(name_to_viz_name(name, False), pr_img)
+            pr_imgs = [viz_png_file(im, pr) for pr in prs]
+            imsave(name_to_viz_name(name, False), pr_imgs[-1])
             gt_mask = data.img2gt(name)
             gt_img = viz_png_file(im, gt_mask)
             imsave(name_to_viz_name(name, True), gt_img)
-        if k % 10 == 0: print "[{}] Done {}".format(os.getpid(), k)
+#        if k % 10 == 0: print "[{}] Done {}".format(os.getpid(), k)
     if not png:
-        return im, pr
+        return im, prs
 
 
 def visualize(model_fname, mat_viz_file):

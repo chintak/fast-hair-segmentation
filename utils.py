@@ -60,7 +60,7 @@ def predict_single(im, keyp, featurize, bst, window, overlap=0, hr_maps=[]):
     return unpatchify(im.shape, idxs, preds, window)
 
 
-def hr_predict_single(im, keyp, hr_model_feats, overlap=0):
+def hr_predict_single(im, keyp, hr_model_feats, overlap=0, last=True):
     if not hr_model_feats: return None
     hr_map = []
     res = []
@@ -68,7 +68,7 @@ def hr_predict_single(im, keyp, hr_model_feats, overlap=0):
         res.append(predict_single(im, keyp, featurize, bst, window,
                                   overlap, hr_map))
         hr_map = [res[-1]]
-    return res[-1]
+    return res[-1] if last else res
 
 
 def img2gt(name):

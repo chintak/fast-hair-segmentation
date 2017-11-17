@@ -1,3 +1,4 @@
+import argparse
 import configs
 import os
 from glob import glob
@@ -7,6 +8,7 @@ from skimage.io import imsave
 import xgboost as xgb
 
 from utils import get_model_feature_type
+from utils import hr_name_to_models, hr_predict_single
 
 
 files_to_show = [
@@ -19,8 +21,7 @@ files_to_show = [
 save_prefix = 'benchmarks/'
 
 
-def main():
-    model_fnames = glob('models/*.model')
+def main(model_fnames):
     names, keypoints = data.mat_to_name_keyp('LFW/FaceKeypointsHOG_11_Test.mat')
     nshow, kpshow = [], []
     for nm, keyp in zip(names, keypoints):
@@ -30,20 +31,23 @@ def main():
             kpshow.append(keyp)
 
     for mname in model_fnames:
-        model_type, feat_type = get_model_feature_type(mname)
-        if not model_type: continue
-        bst = xgb.Booster(params=getattr(configs, model_type)(val=True))
-        bst.load_model(mname)
-        Conf = getattr(configs, feat_type)()
-        featurize = Conf['FEATS']
-        window = Conf['WINDOW']
         for i, (nm, keyp) in enumerate(zip(nshow, kpshow)):
-            im, mask = viz_files([nm], [keyp], bst, featurize, window, png=False)
-            mim = viz_png_file(im, mask)
-            mnm, _ = os.path.splitext(os.path.basename(mname))
-            onm = os.path.join(save_prefix, '{}_{}.jpg'.format(mnm, i))
-            imsave(onm, mim)
+            im, masks = viz_files([nm], [keyp], mname, png=False)
+            for m, mnm in zip(masks, mname.split(',')):
+                mim = viz_png_file(im, m)
+                mnm, _ = os.path.splitext(os.path.basename(mnm))
+                onm = os.path.join(save_prefix, '{}_{}.jpg'.format(mnm, i))
+                imsave(onm, mim)
 
 
 if __name__ == '__main__':
-    main()
+    args = argparse.ArgumentParser()
+    args.add_argument('mname', nargs='+', help='Model file names')
+    parser = args.parse_args()
+
+    if parser.mname:
+        model_fnames = [','.join(parser.mname)]
+    else:
+        model_fnames = glob('models/*.model')
+    print "Model: {}".format(model_fnames)
+    main(model_fnames)

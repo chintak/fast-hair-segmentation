@@ -71,7 +71,7 @@ def eval(model_fname, mat_viz_file):
         ttp += tp; ttn += tn; tfp += fp; tfn += fn
 
     print "Model: {} pixel level:".format(model_fname)
-    print "\thair accuracy = {:.03f}".format(1. - (tfp + tfn) / (EPS + ttp + ttn))
+    print "\thair accuracy = {:.03f}".format(1. - (tfp + tfn) / (EPS + tfn + tfp + ttp + ttn))
     print "\tprec \t= {:.03f}".format((ttp) / (EPS + ttp + tfp))
     print "\trec  \t= {:.03f}".format((ttp) / (EPS + ttp + tfn))
 

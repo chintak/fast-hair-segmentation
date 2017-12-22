@@ -77,7 +77,7 @@ def visualize(model_fname, mat_viz_file):
         p = mp.Process(target=viz_files,
                        args=(names[chunksize*i:lim],
                              keypoints[chunksize*i:lim],
-                             bst.copy(), featurize, window))
+                             model_fname))
         procs.append(p)
         p.start()
 

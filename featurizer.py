@@ -75,8 +75,20 @@ class Featurizer(object):
     def get_heirarchical_labels(self, feats, x, y, hr_maps):
         for pr in hr_maps:
             p = pr[x:x+self.window, y:y+self.window]
-            s = self.window ** 2 * 1.0
-            feats.extend([np.sum(p==BKG)/s, np.sum(p==FACE)/s, np.sum(p==FACE)/s])
+            feats.extend(self._hr_label_feats(p))
+
+    def get_neighb_hr_labels(self, feats, x, y, hr_maps):
+        pass
+
+    def get_lbp_features(self, feats, patch):
+        pass
+
+    def get_glcm_features(self, feats, patch):
+        pass
+
+    def _hr_label_feats(self, p):
+        s = self.window ** 2 * 1.0
+        return [np.sum(p==BKG)/s, np.sum(p==FACE)/s, np.sum(p==FACE)/s]
 
     def _chist_feats(self, patch):
         dim = patch.ndim
